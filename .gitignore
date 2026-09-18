@@ -1,0 +1,16 @@
+# 凭据与 token store —— 绝不能提交
+.baidu-auth.env
+.baidu-auth.env.*
+*.token
+
+# 脚本运行时产物
+*.tmp
+.DS_Store
+
+# 开发脚本不入库：回归测试、文档校验、诊断探针等按需本地创建
+scripts/*-test.cjs
+scripts/check-*.cjs
+scripts/probe-*.cjs
+
+# 版本变更记录：不进仓库、也不进 skillhub 发布包 —— 该文件已移出 skill 目录（发布包会包含目录内所有文件，不看 .gitignore），此处仅作保险
+CHANGELOG.md

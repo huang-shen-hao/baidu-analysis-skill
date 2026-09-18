@@ -1,0 +1,62 @@
+baidu-analysis
+Copyright 2026 huang-shen-hao
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+This NOTICE file must be retained in any derivative distribution,
+as required by Section 4(b) of the License.
+
+-------------------------------------------------------------------------------
+1. Third-party content (NOT covered by the Apache-2.0 license)
+-------------------------------------------------------------------------------
+
+Baidu Marketing API documentation
+  Source      : https://dev2.baidu.com/content   (百度商业开发者中心)
+  Copyright   : Baidu, Inc. All rights reserved.
+  Included as : excerpts in docs/*.md — field tables, required-field
+                constraints, enum values and request/response examples.
+  Purpose     : reference for using the Baidu Marketing API only.
+  Note        : These excerpts are the property of Baidu, Inc. and are NOT
+                licensed under Apache-2.0. Redistribution of this repository
+                does not grant any rights to the underlying Baidu documentation.
+
+-------------------------------------------------------------------------------
+2. Trademarks
+-------------------------------------------------------------------------------
+
+"百度" / "Baidu", "百度推广", "百度营销" and related marks are trademarks of
+Baidu, Inc. They are used in this project only for descriptive purposes
+(naming the platform this tool integrates with).
+
+This project is an independent, personal project. It is NOT affiliated with,
+endorsed by, sponsored by, or otherwise connected to Baidu, Inc.
+
+This project name ("baidu-analysis-skill") and its repository description use
+the Baidu name descriptively only; no Baidu logo or brand asset is included.
+
+-------------------------------------------------------------------------------
+3. Original work of this project (covered by Apache-2.0)
+-------------------------------------------------------------------------------
+
+  scripts/*.cjs        regression tests, doc-consistency checker, endpoint probe
+  scripts/api.ts       unified API entrypoint (action registry, validators,
+                       error-code mapping, rate/timeout handling)
+  SKILL.md             instruction layer: routing index, anti-patterns,
+                       credential rules, output contract
+  docs/deprecated-actions.md, docs/verification-log.md, docs/_TEMPLATE.md
+                       project-authored documentation
+
+-------------------------------------------------------------------------------
+4. No warranty / API volatility
+-------------------------------------------------------------------------------
+
+Endpoint availability, error codes and field constraints documented here were
+verified against the Baidu platform and by live calls on 2026-09-18; see
+docs/verification-log.md for exactly what was and was not verified.
+
+Baidu may change or retire any interface at any time without notice. Items
+already marked as deprecated (see docs/deprecated-actions.md) are retained
+because they still respond, but may stop working at any moment.
+
+THE SOFTWARE AND DOCUMENTATION ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
