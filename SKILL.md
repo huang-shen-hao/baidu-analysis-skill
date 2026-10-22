@@ -1,17 +1,17 @@
 ---
 name: baidu-analysis
 slug: baidu-analysis
-version: 0.9.7
+version: 0.9.8
 displayName: 百度推广助手
-description: "通过百度营销 API 查询和操作百度推广账户的投放数据与结构：账户消耗/余额、MCC 子账号、计划/单元/创意/关键词、否定关键词与否词包、oCPC 出价策略、创意组件与图片素材、数据报表、转化追踪。适用于「看消耗/余额/报表」「改预算/暂停计划」「加否词」「查搜索词」「查/绑图片素材」等百度投放需求，需要已完成 OAuth 授权并指定推广账号（MCC 账户需先选择子账号），写操作必须先获得用户确认。"
+description: "通过百度营销 API 查询和操作百度推广账户的投放数据与结构：账户消耗/余额、MCC 子账号、计划/单元/创意/关键词、关键词规划师（种子词拓词、账户推荐词、流量预估）、否定关键词与否词包、oCPC 出价策略、创意组件与图片素材、数据报表、转化追踪。适用于「看消耗/余额/报表」「改预算/暂停计划」「加否词」「查搜索词」「拓词/估词量」「查/绑图片素材」等百度投放需求，需要已完成 OAuth 授权并指定推广账号（MCC 账户需先选择子账号），写操作必须先获得用户确认。"
 summary: 在对话中查询和操作百度推广账户：消耗、报表、计划、否词、图片素材
 homepage: https://github.com/huang-shen-hao/baidu-analysis-skill
 license: Apache-2.0
 tags: ["百度推广", "百度营销", "广告投放", "marketing", "sem", "oCPC", "数据报表"]
 metadata:
   category: productivity
-  updated: 2026-09-18
-  actions: 70
+  updated: 2026-10-22
+  actions: 73
   deprecated_actions: 7
   entrypoint: scripts/api.ts
   requires:
@@ -162,6 +162,16 @@ metadata:
 | `keyword-add` | 新增关键词 | WRITE |
 | `keyword-update` | 更新关键词 | WRITE |
 | `keyword-delete` | 删除关键词 | WRITE |
+
+### 关键词规划师
+
+| action 值 | 能力 | 类型 |
+| --- | --- | --- |
+| `keyword-planner-recommend-get` | 种子词拓词（一次一个种子词，返回推荐词 + 月均搜索量 + 指导价） | READ |
+| `keyword-planner-custom-get` | 账户主动推荐词（按计划/单元 id 推荐） | READ |
+| `keyword-planner-pv-get` | 关键词流量预估（批量 1–1000 词：月均 pv/展现/点击/指导价） | READ |
+
+> ⚠️ `competition` 竞争度方向**两个接口相反**：`recommend` 是 1 低 / 2 中 / 3 高，`custom` 是 1 高 / 2 中 / 3 低，跨接口套阈值会判反。
 
 ### 否定关键词
 

@@ -490,6 +490,23 @@ const ACTIONS = {
     method: 'POST',
     write: true,
     verified: true
+  },
+  // ---- 工具 · 关键词规划师（dev2「工具 / 搜索推广工具 / 关键词规划师」）----
+  // 只读：拓词与流量预估都不改账户结构，不需要 confirmWrite。
+  'keyword-planner-recommend-get': {
+    endpoint: '/json/sms/service/KRService/getKRByQuery',
+    method: 'POST',
+    verified: true
+  },
+  'keyword-planner-custom-get': {
+    endpoint: '/json/sms/service/KRService/getKRCustom',
+    method: 'POST',
+    verified: true
+  },
+  'keyword-planner-pv-get': {
+    endpoint: '/json/sms/service/PvSearchFunction/getPvSearch',
+    method: 'POST',
+    verified: true
   }
 };
 
@@ -681,7 +698,10 @@ function validatePayload(payload) {
     'image-segment-delete': validateImageSegmentDelete,
     'adgroup-image-segment-bind-get': validateAdgroupImageSegmentBindGet,
     'adgroup-image-segment-bind-add': validateAdgroupImageSegmentBindAdd,
-    'adgroup-image-segment-bind-delete': validateAdgroupImageSegmentBindDelete
+    'adgroup-image-segment-bind-delete': validateAdgroupImageSegmentBindDelete,
+    'keyword-planner-recommend-get': validateKeywordPlannerRecommendGet,
+    'keyword-planner-custom-get': validateKeywordPlannerCustomGet,
+    'keyword-planner-pv-get': validateKeywordPlannerPvGet
   };
 
   const validator = validators[payload.action];
@@ -1386,6 +1406,115 @@ function validateImageDelete(payload) {
     throw usageError('image-delete: imageIds max 100 per request');
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  关键词规划师（KRService / PvSearchFunction）                        */
+/*  契约来源：dev2「工具 / 搜索推广工具 / 关键词规划师」                 */
+/* ------------------------------------------------------------------ */
+
+const KR_DEVICES = [0, 1, 2];                       // 0 全部 / 1 计算机 / 2 移动
+const KR_ORDER_BY = ['price', 'matchType', 'averageMonthPv', 'averageMonthPvMobile',
+  'averageMonthPvPc', 'show', 'click', 'pcPrice', 'mobilePrice'];
+
+function bytesOf(value) {
+  return Buffer.byteLength(String(value), 'utf8');
+}
+
+/** seedFilter 是三个拓词接口共用的筛选条件块，规则只写一处。 */
+function validateSeedFilter(filter, at) {
+  if (filter === undefined) return;
+  if (filter === null || typeof filter !== 'object' || Array.isArray(filter)) {
+    throw usageError(`${at}: seedFilter must be an object`);
+  }
+  if (filter.device !== undefined && !KR_DEVICES.includes(filter.device)) {
+    throw usageError(`${at}: seedFilter.device must be one of 0/1/2`);
+  }
+  if (filter.maxNum !== undefined &&
+      (!Number.isInteger(filter.maxNum) || filter.maxNum < 1 || filter.maxNum > 1000)) {
+    throw usageError(`${at}: seedFilter.maxNum must be an integer in [1, 1000]`);
+  }
+  if (filter.negativeWords !== undefined) {
+    if (!Array.isArray(filter.negativeWords) || filter.negativeWords.length > 10) {
+      throw usageError(`${at}: seedFilter.negativeWords must be an array with at most 10 items`);
+    }
+    filter.negativeWords.forEach((word, i) => {
+      if (bytesOf(word) > 64) {
+        throw usageError(`${at}: seedFilter.negativeWords[${i}] exceeds 64 bytes`);
+      }
+    });
+  }
+  if (filter.positiveWord !== undefined && bytesOf(filter.positiveWord) > 64) {
+    throw usageError(`${at}: seedFilter.positiveWord exceeds 64 bytes`);
+  }
+  if (filter.searchRegions !== undefined && !Array.isArray(filter.searchRegions)) {
+    throw usageError(`${at}: seedFilter.searchRegions must be an array of region codes`);
+  }
+}
+
+function validateKeywordPlannerRecommendGet(payload) {
+  const body = payload.body || {};
+  const query = body.query;
+  if (typeof query !== 'string' || query.trim() === '') {
+    throw usageError('keyword-planner-recommend-get requires body.query（种子词，一次只能一个）');
+  }
+  if (bytesOf(query) > 64) {
+    throw usageError('keyword-planner-recommend-get: query exceeds 64 bytes');
+  }
+  validateSeedFilter(body.seedFilter, 'keyword-planner-recommend-get');
+}
+
+function validateKeywordPlannerCustomGet(payload) {
+  const body = payload.body || {};
+  if (body.idType !== undefined && ![3, 5].includes(body.idType)) {
+    throw usageError('keyword-planner-custom-get: idType must be 3（计划）or 5（单元）');
+  }
+  if (body.id !== undefined && (!Number.isInteger(body.id) || body.id <= 0)) {
+    throw usageError('keyword-planner-custom-get: id must be a positive integer');
+  }
+  if (body.id !== undefined && body.idType === undefined) {
+    throw usageError('keyword-planner-custom-get: 传 id 时必须同时传 idType（3=计划 / 5=单元）');
+  }
+  validateSeedFilter(body.seedFilter, 'keyword-planner-custom-get');
+}
+
+function validateKeywordPlannerPvGet(payload) {
+  const body = payload.body || {};
+  if (body.bidWordSource !== 'wordList') {
+    throw usageError('keyword-planner-pv-get: bidWordSource 目前只支持 "wordList"');
+  }
+  const list = body.keywordList;
+  if (!Array.isArray(list) || list.length === 0) {
+    throw usageError('keyword-planner-pv-get requires body.keywordList as a non-empty array');
+  }
+  if (list.length > 1000) {
+    throw usageError('keyword-planner-pv-get: keywordList max 1000 per request');
+  }
+  list.forEach((item, index) => {
+    const at = `keyword-planner-pv-get: keywordList[${index}]`;
+    if (!item || typeof item.keywordName !== 'string' || item.keywordName.trim() === '') {
+      throw usageError(`${at}.keywordName is required`);
+    }
+    if (bytesOf(item.keywordName) > 40) {
+      throw usageError(`${at}.keywordName exceeds 40 bytes`);
+    }
+    if (item.matchType !== undefined && ![1, 2].includes(item.matchType)) {
+      throw usageError(`${at}.matchType must be 1（精确）or 2（短语/智能，配 phraseType）`);
+    }
+    if (item.phraseType !== undefined && ![1, 3].includes(item.phraseType)) {
+      throw usageError(`${at}.phraseType must be 1 or 3`);
+    }
+  });
+  if (body.device !== undefined && !KR_DEVICES.includes(body.device)) {
+    throw usageError('keyword-planner-pv-get: device must be one of 0/1/2');
+  }
+  if (body.orderBy !== undefined && !KR_ORDER_BY.includes(body.orderBy)) {
+    throw usageError(`keyword-planner-pv-get: orderBy must be one of ${KR_ORDER_BY.join('/')}`);
+  }
+  if (body.order !== undefined && !['asc', 'desc'].includes(body.order)) {
+    throw usageError('keyword-planner-pv-get: order must be asc or desc');
+  }
+}
+
 
 /* ---- 已下线但仍可用的创意配图 / 配图绑定（补齐原先缺失的校验） ---- */
 

@@ -192,6 +192,14 @@ node scripts/api.ts --payload='{"action":"report-data-get","userName":"子账号
 | `keyword-update` | 更新关键词 | WRITE |
 | `keyword-delete` | 删除关键词 | WRITE |
 
+### 关键词规划师
+
+| action | 能力 | 类型 |
+| --- | --- | --- |
+| `keyword-planner-recommend-get` | 种子词拓词（返回推荐词 + 月均搜索量 + 指导价） | READ |
+| `keyword-planner-custom-get` | 账户主动推荐词（按计划/单元 id） | READ |
+| `keyword-planner-pv-get` | 关键词流量预估（批量 1–1000 词） | READ |
+
 ### 否定关键词 CRUD
 
 | action | 能力 | 类型 |
