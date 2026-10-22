@@ -42,7 +42,7 @@
 | 字段 | 类型 | 必填 | 说明 | 限制 |
 |------|------|------|------|------|
 | `productLine` | String | 是 | 图片所在产品线 | 固定传 `FENGCHAO` |
-| `items` | UploadType[] | 是 | 上传图片的集合 | - |
+| `items` | UploadType[] | 是 | 上传图片的集合 | 官方未给单次数量上限（脚本侧限 20 张/次） |
 | `needMola` | Boolean | - | 是否需要 molaUrl | 目前必须填写为 `true` |
 | `addImage` | Boolean | - | 是否添加到我的图片 | 默认 `true` |
 
@@ -50,7 +50,7 @@
 
 | 字段 | 类型 | 必填 | 说明 | 限制 |
 |------|------|------|------|------|
-| `content` | String | 是 | 图片内容 base64 编码 | 支持 jpg、png 格式，最大不超过 2M |
+| `content` | String | 是 | 图片内容 base64 编码（只收 base64，无 URL 入参） | 支持 jpg、png 格式，最大不超过 2M；不要带 `data:image/...;base64,` 前缀 |
 | `imgmd5` | String | - | 图片MD5 | - |
 
 ## 返回字段
@@ -69,11 +69,11 @@
 
 | 现象 | 原因 | 处理 |
 |------|------|------|
-| `segment-upload-img: items[i].content is required` | 缺少必填字段 | 按本文「输入字段」补齐该字段 |
-| `segment-upload-img: items[i].content must not include the "data:image/..." prefix` | 参数不符合接口约束 | 对照本文「输入字段」逐项核对 |
-| `segment-upload-img: items[i].content is too large (request body max 10M)` | 请求体过大 | 压缩内容或分批提交 |
+| `segment-upload-img: items[i].content is required (base64)` | 缺少必填字段 | 按本文「输入字段」补齐该字段；content 传纯 base64 |
+| `segment-upload-img: items[i].content must not include the "data:image/...;base64," prefix` | content 带了 `data:` 前缀 | 只传纯 base64 字符串 |
+| `segment-upload-img: items[i].content is too large (官方限制单张 2M)` | 单张图片超过 2M | 压缩图片（官方按单张算，不是整包） |
 | `segment-upload-img requires body.items as a non-empty array` | 漏传必填字段 items | 按本文「输入字段」补齐 body.items |
-| `segment-upload-img: items max 20 per request` | 单次提交数量超过上限 20 | 分批提交，每批 ≤ 20 |
+| `segment-upload-img: items max 20 per request（脚本侧上限，官方未给数量上限）` | 单次超过 20 张（脚本侧保护） | 分批提交，每批 ≤ 20 |
 | `segment-upload-img: productLine must be "FENGCHAO" when provided` | 参数不符合接口约束 | 对照本文「输入字段」逐项核对 |
 | `segment-upload-img: needMola must be true when provided` | 安全约束未满足 | 按本文「安全要求」把该字段显式设为 true |
 | `status=2 code=81020` | 用户名不正确：常见于误用 MCC/账户管家主账号调业务接口 | 改用具体推广子账号的 username |

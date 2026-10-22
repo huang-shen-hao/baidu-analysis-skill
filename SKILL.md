@@ -1,7 +1,7 @@
 ---
 name: baidu-analysis
 slug: baidu-analysis
-version: 0.9.8
+version: 0.9.9
 displayName: 百度推广助手
 description: "通过百度营销 API 查询和操作百度推广账户的投放数据与结构：账户消耗/余额、MCC 子账号、计划/单元/创意/关键词、关键词规划师（种子词拓词、账户推荐词、流量预估）、否定关键词与否词包、oCPC 出价策略、创意组件与图片素材、数据报表、转化追踪。适用于「看消耗/余额/报表」「改预算/暂停计划」「加否词」「查搜索词」「拓词/估词量」「查/绑图片素材」等百度投放需求，需要已完成 OAuth 授权并指定推广账号（MCC 账户需先选择子账号），写操作必须先获得用户确认。"
 summary: 在对话中查询和操作百度推广账户：消耗、报表、计划、否词、图片素材
@@ -217,17 +217,27 @@ metadata:
 
 | action 值 | 能力 | 类型 |
 | --- | --- | --- |
-| `image-upload` | 上传图片（搜索推广与信息流共用） | WRITE |
+| `image-upload` | 上传图片（须 base64，搜索推广与信息流共用） | WRITE |
 | `image-get` | 查询图片（按 ID/尺寸/大小/格式/时间筛选） | READ |
 | `image-update` | 编辑图片（改名、收藏） | WRITE |
 | `image-delete` | 删除图片 | WRITE |
+
+**图片一律传 base64**（官方接口只收 base64 字符串，没有 URL / 本地路径入参）：
+
+| action | `content` 要求 | 体积 | 数量 |
+| --- | --- | --- | --- |
+| `image-upload` | 纯 base64，**不带** `data:image/...;base64,` 前缀；jpg/jpeg/png | 请求体 ≤ **10M**（单张不限） | 单次 ≤ **20 张** |
+| `segment-upload-img` | 纯 base64；jpg/png | 单图 ≤ **2M** | 官方未给上限（脚本侧限 20 张/次） |
+| `image-segment-add` | `srcImageContent` / `logoImgContent` 传纯 base64 | 单图 ≤ **5M** | `desc` 主题 1–20 个、每个 ≤ 60 字符；logo ≤ 2 个 |
+
+> 大段 base64 用 `--payload-file=<path>` 传，别塞命令行（会撞系统参数长度上限）。
 
 ### 创意配图素材（⚠️ 官方已标注下线，实测仍可用）
 
 | action 值 | 能力 | 类型 |
 | --- | --- | --- |
 | `image-segment-get` | 查询图片素材（含审核状态与拒绝理由） | READ |
-| `image-segment-add` | 新增图片素材（base64 转链） | WRITE |
+| `image-segment-add` | 新增图片素材（`srcImageContent` 须 base64，单图 ≤5M） | WRITE |
 | `image-segment-update` | 更新图片素材（主题 desc / 启停 status） | WRITE |
 | `image-segment-delete` | 删除图片素材 | WRITE |
 

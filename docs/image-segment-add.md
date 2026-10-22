@@ -108,6 +108,10 @@
 | 现象 | 原因 | 处理 |
 |------|------|------|
 | `srcImageContent is required (base64)` | 缺少必填字段 | 按本文「输入字段」补齐该字段 |
+| `srcImageContent is too large (官方限制单张 5M)` | 单张图超过 5M | 压缩图片 |
+| `desc must have 1–20 主题` | 主题数量不在 1–20 | 每张图给 1–20 个主题 |
+| `desc[i] exceeds 60 characters` | 单个主题超过 60 字符 | 精简主题描述 |
+| `logoPicTypes 最多 2 个 logo` | logo 超过 2 个 | 最多传 2 个 |
 | `segmentType must be 100 (计算机) or 101 (移动)` | 枚举取值非法 | 只接受文档列出的枚举值 |
 | `desc must be an array of 图片主题` | 参数不符合接口约束 | 对照本文「输入字段」逐项核对 |
 | `image-segment-add requires body.addSegmentRequestTypes` | 漏传必填字段 addSegmentRequestTypes | 按本文「输入字段」补齐 body.addSegmentRequestTypes |

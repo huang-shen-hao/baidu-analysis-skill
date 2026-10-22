@@ -46,7 +46,7 @@
 | 字段 | 类型 | 必填 | 说明 | 限制 |
 |------|------|------|------|------|
 | `items` | UploadImageItem[] | 是 | 图片上传对象 | 一次最多上传 **20 张** |
-| `content` | String | 是 | 图片的 base64 编码 | 不能为空；支持 jpg/jpeg/png；请求体最大 **10M**；**不要带** `data:image/xxx;base64,` 前缀 |
+| `content` | String | 是 | 图片的 base64 编码（只收 base64，无 URL / 路径入参） | 不能为空；支持 jpg/jpeg/png；请求体最大 **10M**；**不要带** `data:image/xxx;base64,` 前缀 |
 | `imgmd5` | String | - | 图片的 md5 | - |
 | `imageName` | String | - | 图片名称 | 不超过 200 个字符（英文数字 1 字符，中文 2 字符） |
 | `addImage` | Boolean | - | 是否保存到我的图库 | 默认 `false`（仅上传不保存）；`true` 时可在推广平台「资产中心-我的图片」查询，并会生成 `imageId` |
@@ -69,7 +69,7 @@
 | `BAIDU_USAGE_ERR: items max 20 per request` | 一次传超过 20 张图片 | 分批上传，每批 ≤ 20 张 |
 | `content must not include the "data:image/..." prefix` | base64 带了 `data:image/jpg;base64,` 前缀 | 只传纯 base64 字符串 |
 | 返回结果里没有 `imageId` | `addImage` 默认 `false`（仅上传不保存） | 需要入库并返回 `imageId` 时显式传 `addImage: true` |
-| 请求体过大被拒 | base64 超过 10M | 压缩图片，或改用分片上传接口 |
+| `image-upload: request body exceeds 10M（官方限制整包 ≤ 10M，请分批）` | 整包 base64 超过 10M（官方：单张不限、整包 ≤ 10M） | 压缩图片或分批上传 |
 
 > **来源**：校验器条目逐字取自 `scripts/api.ts`（与本 skill 实际输出一致，可复现）；
 > 权限类错误码取自百度官方错误码表（dev2.baidu.com 节点 166），已按**动作**精确映射，但**未经逐条实测**。

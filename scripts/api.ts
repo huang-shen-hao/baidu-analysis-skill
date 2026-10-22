@@ -1130,26 +1130,34 @@ function validateSegmentBindDelete(payload) {
 
 /* ---- Image Upload ---- */
 
+// base64 字符数 → 原始字节数（4 字符 = 3 字节，去掉尾部 padding）
+function base64Bytes(text) {
+  const s = String(text || '').replace(/\s+/g, '');
+  const pad = s.endsWith('==') ? 2 : (s.endsWith('=') ? 1 : 0);
+  return Math.max(0, Math.floor((s.length * 3) / 4) - pad);
+}
+
 function validateSegmentUploadImg(payload) {
   const body = payload.body || {};
-  // 官方节点 522「上传图片」：items 必填，单次最多 20 张，content 为 base64，请求体不超过 10M，
-  // 且 content 不能带 "data:image/xxx;base64," 前缀。
+  // 官方节点 535「组件图片上传」（ImageManagementService/uploadImage）：items 必填；content 为纯 base64，
+  // 支持 jpg/png、**单张 ≤ 2M**；productLine 固定 FENGCHAO；needMola 目前必须 true。
+  // 官方页面未给单次数量上限，下面的 20 张是脚本侧的保护性上限。
   const items = body.items;
   if (!Array.isArray(items) || items.length === 0) {
     throw usageError('segment-upload-img requires body.items as a non-empty array');
   }
   if (items.length > 20) {
-    throw usageError('segment-upload-img: items max 20 per request');
+    throw usageError('segment-upload-img: items max 20 per request（脚本侧上限，官方未给数量上限）');
   }
   items.forEach((item, index) => {
     if (!item || typeof item.content !== 'string' || item.content.trim() === '') {
-      throw usageError(`segment-upload-img: items[${index}].content is required`);
+      throw usageError(`segment-upload-img: items[${index}].content is required (base64)`);
     }
     if (/^data:image\//i.test(item.content.trim())) {
-      throw usageError(`segment-upload-img: items[${index}].content must not include the "data:image/..." prefix`);
+      throw usageError(`segment-upload-img: items[${index}].content must not include the "data:image/...;base64," prefix`);
     }
-    if (item.content.length > 14000000) {
-      throw usageError(`segment-upload-img: items[${index}].content is too large (request body max 10M)`);
+    if (base64Bytes(item.content) > 2 * 1024 * 1024) {
+      throw usageError(`segment-upload-img: items[${index}].content is too large (官方限制单张 2M)`);
     }
   });
   if (body.productLine !== undefined && body.productLine !== 'FENGCHAO') {
@@ -1327,21 +1335,24 @@ function validateImageUpload(payload) {
   if (items.length > 20) {
     throw usageError('image-upload: items max 20 per request');
   }
+  // 官方节点 522：单张不限，但**整包请求体 ≤ 10M**（content 为纯 base64，不带 data: 前缀）。
+  let totalBytes = 0;
   items.forEach((item, index) => {
     const at = `image-upload: items[${index}]`;
     if (!item || typeof item.content !== 'string' || item.content.trim() === '') {
       throw usageError(`${at}.content is required (base64)`);
     }
     if (/^data:image\//i.test(item.content.trim())) {
-      throw usageError(`${at}.content must not include the "data:image/..." prefix`);
+      throw usageError(`${at}.content must not include the "data:image/...;base64," prefix`);
     }
-    if (item.content.length > 14000000) {
-      throw usageError(`${at}.content is too large (request body max 10M)`);
-    }
+    totalBytes += base64Bytes(item.content);
     if (item.imageName !== undefined && baiduByteLength(item.imageName) > 200) {
       throw usageError(`${at}.imageName max 200 characters (中文按 2 字符)`);
     }
   });
+  if (totalBytes > 10 * 1024 * 1024) {
+    throw usageError('image-upload: request body exceeds 10M（官方限制整包 ≤ 10M，请分批）');
+  }
   if (body.addImage !== undefined && typeof body.addImage !== 'boolean') {
     throw usageError('image-upload: addImage must be a boolean');
   }
@@ -1523,16 +1534,39 @@ function validateImageSegmentAdd(payload) {
   if (!Array.isArray(list) || list.length === 0) {
     throw usageError('image-segment-add requires body.addSegmentRequestTypes');
   }
+  // 官方节点 219（ImageSegmentService/addImageSegment）：srcImageContent 为纯 base64、**单张 ≤ 5M**；
+  // desc 至少 1 个、最多 20 个主题、每个 ≤ 60 字符；logoPicTypes 最多 2 个。
   list.forEach((item, index) => {
     const at = `image-segment-add: addSegmentRequestTypes[${index}]`;
     if (!item?.srcImageContent) {
       throw usageError(`${at}.srcImageContent is required (base64)`);
     }
+    if (base64Bytes(item.srcImageContent) > 5 * 1024 * 1024) {
+      throw usageError(`${at}.srcImageContent is too large (官方限制单张 5M)`);
+    }
     if (![100, 101].includes(item.segmentType)) {
       throw usageError(`${at}.segmentType must be 100 (计算机) or 101 (移动)`);
     }
-    if (item.desc !== undefined && !Array.isArray(item.desc)) {
-      throw usageError(`${at}.desc must be an array of 图片主题`);
+    if (item.desc !== undefined) {
+      if (!Array.isArray(item.desc)) {
+        throw usageError(`${at}.desc must be an array of 图片主题`);
+      }
+      if (item.desc.length === 0 || item.desc.length > 20) {
+        throw usageError(`${at}.desc must have 1–20 主题`);
+      }
+      item.desc.forEach((topic, i) => {
+        if (typeof topic !== 'string' || topic.trim() === '') {
+          throw usageError(`${at}.desc[${i}] must be a non-empty string`);
+        }
+        if (Array.from(topic).length > 60) {
+          throw usageError(`${at}.desc[${i}] exceeds 60 characters`);
+        }
+      });
+    }
+    if (item.logoPicTypes !== undefined) {
+      if (!Array.isArray(item.logoPicTypes) || item.logoPicTypes.length > 2) {
+        throw usageError(`${at}.logoPicTypes 最多 2 个 logo`);
+      }
     }
   });
 }
