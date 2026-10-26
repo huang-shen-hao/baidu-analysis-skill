@@ -169,7 +169,7 @@
 | 3120 商品橱窗 | PC | `plas` 4 | `image.url`、`name`、`desc`、`url` | PLAN |
 | 3124 热点橱窗 | PC | `plas` 4、`category` 1（子链 3–15） | plas: 四项全填；category: `industry`/`label`/`text`/`linkUrl` | PLAN |
 | 3148 全息 | PC | `image` + `selectList` 4 | selectList: `key`、`value` | PLAN |
-| 3149 全息 | 移动 | `image` + `selectList` 2 + `category` 1（子链 2–4） | category: `text`（**12–16 字**）、`linkUrl` | PLAN |
+| 3149 全息 | 移动 | `image` + `selectList` 2 + `category` 1（子链 2–4） | category: `text`（**4–12 字节，即 2–6 个汉字**）、`linkUrl` | PLAN |
 | 3003 商品列表 | PC | `list` 1 块，`rows` 1–4 行 | `industry`、`label`、`text`、`linkUrl` | PLAN |
 | 3128 商品列表 | 移动 | `list` 1 块，`rows` 1–2 行 | 同上 | PLAN |
 
@@ -203,7 +203,7 @@
 | `content 必须是对象（官方 Category，不是数组）` | `category` / `list` 的 content 写成了数组 | 改成单个对象 |
 | `url 必填（商品链接，样式 3036 要求）` | 该样式的橱窗商品缺必填字段 | 按「各样式组件要求」表补齐 |
 | `样式 3149 需要组件 category` | 全息移动缺子链组件 | 补 `category`：1 个主 + 2–4 个子链 |
-| `3149（全息移动）子链 text 需 12–16 个字符` | 子链文案长度不合规 | 调整到 12–16 字 |
+| `3149（全息移动）子链 text 需 4–12 字节（中文 2 字节，即 2–6 个汉字），本次 N 字节` | 子链文案长度不合规（远端对应 9011003201「长度要求 4-12」） | 调整到 4–12 字节：2–6 个汉字，或 4–12 个英文数字 |
 | `creativeComponents 不支持的组件 xxx` | 组件键写错（如 `select_list`、`plAS`） | 只允许 `category/image/selectList/textList/plas/list` |
 | 远端 `9011862000000 系统出错` | 字段都过了但服务端内部校验失败：绑定层级不符（PLAN 样式绑账户）、`image` 只有 url 没有 imageId、content 条数不在区间、`mtId` 与 `materialTypes` 不一致、3149 子链缺字段 | 按上面四类逐条自查；本地校验器已覆盖这四类，能过本地再发就不会再撞这个错 |
 | `status=2 code=81020` | 用户名不正确：常见于误用 MCC/账户管家主账号调业务接口 | 改用具体推广子账号的 username |

@@ -1034,8 +1034,12 @@ function validateDanubeComponent(key, list, at, mtIds) {
             const at3 = `${at2}.textLink[${m}]`;
             if (!nonEmptyString(tl?.text)) danubeError(at3, 'text 必填');
             if (!nonEmptyString(tl?.linkUrl)) danubeError(at3, 'linkUrl 必填');
-            if (mtId === 3149 && (Array.from(tl.text).length < 12 || Array.from(tl.text).length > 16)) {
-              danubeError(at3, '3149（全息移动）子链 text 需 12–16 个字符');
+            // 远端实测（9011003201「长度要求 4-12」）：按字节算，中文 2 字节，即 2–6 个汉字
+            if (mtId === 3149) {
+              const len = baiduByteLength(tl.text);
+              if (len < 4 || len > 12) {
+                danubeError(at3, `3149（全息移动）子链 text 需 4–12 字节（中文 2 字节，即 2–6 个汉字），本次 ${len} 字节`);
+              }
             }
           });
         });
