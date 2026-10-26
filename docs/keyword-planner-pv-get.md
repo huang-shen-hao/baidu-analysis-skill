@@ -51,7 +51,7 @@
 
 | 字段 | 类型 | 说明 | 限制 |
 |------|------|------|------|
-| `keywordName` | String | 关键词字面 | ≤40 字节（1 个中文按 2 字节） |
+| `keywordName` | String | 关键词字面 | ≤40 字节（1 个中文按 2 字节，英文数字按 1 字节，即最多 20 个中文） |
 | `matchType` | Integer | 匹配模式 | 1 = 精确（配 `phraseType=1`）；2 = 短语（配 1）或智能（配 3） |
 | `phraseType` | Integer | 细分匹配 | 1 / 3，与 `matchType` 配合 |
 
@@ -62,6 +62,8 @@
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `logid` | Long | 本次预估的唯一标识 |
+| `actualWordList` | String[] | **实际参与预估的词**（黄反/次数限制会导致部分词不被预估），与 `data[]` 同级 |
+| `errorItems[]` | PvSearchResponseErrorItem[] | 未能预估的词及原因：`code`（错误码）/ `message`（错误信息），与 `data[]` 同级 |
 | `data[]` | PvSearchResponseWordItem[] | 每个词的预估结果 |
 | `data[].keywordName` | String | 关键词字面 |
 | `data[].averageMonthPv` | Long | **月均搜索量** |
@@ -72,8 +74,6 @@
 | `data[].kwc` | Long | 竞价激烈程度：1 高 / 2 中 / 3 低 |
 | `data[].matchType` / `phraseType` | Integer | 回显的匹配模式 |
 | `data[].showReasons` | String[] | 举荐理由（高频热搜词/黑马词/转化潜力词…） |
-| `data[].actualWordList` | String[] | **实际参与预估的词**（黄反/次数限制会导致部分词不被预估） |
-| `errorItems` | PvS...[] | 未能预估的词及原因 |
 
 > ⚠️ 返回的是**预估**而非账户实际数据；`actualWordList` 与传入列表不一致时，说明部分词被过滤，结论要按它算。
 

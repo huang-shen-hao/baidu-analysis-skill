@@ -109,6 +109,7 @@
 |------|------|------|
 | `srcImageContent is required (base64)` | 缺少必填字段 | 按本文「输入字段」补齐该字段 |
 | `srcImageContent is too large (官方限制单张 5M)` | 单张图超过 5M | 压缩图片 |
+| `desc is required（至少 1 个图片主题）` | 没传 desc | 官方要求每个素材至少 1 个主题 |
 | `desc must have 1–20 主题` | 主题数量不在 1–20 | 每张图给 1–20 个主题 |
 | `desc[i] exceeds 60 characters` | 单个主题超过 60 字符 | 精简主题描述 |
 | `logoPicTypes 最多 2 个 logo` | logo 超过 2 个 | 最多传 2 个 |

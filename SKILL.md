@@ -1,7 +1,7 @@
 ---
 name: baidu-analysis
 slug: baidu-analysis
-version: 0.9.9
+version: 0.9.10
 displayName: 百度推广助手
 description: "通过百度营销 API 查询和操作百度推广账户的投放数据与结构：账户消耗/余额、MCC 子账号、计划/单元/创意/关键词、关键词规划师（种子词拓词、账户推荐词、流量预估）、否定关键词与否词包、oCPC 出价策略、创意组件与图片素材、数据报表、转化追踪。适用于「看消耗/余额/报表」「改预算/暂停计划」「加否词」「查搜索词」「拓词/估词量」「查/绑图片素材」等百度投放需求，需要已完成 OAuth 授权并指定推广账号（MCC 账户需先选择子账号），写操作必须先获得用户确认。"
 summary: 在对话中查询和操作百度推广账户：消耗、报表、计划、否词、图片素材
@@ -10,7 +10,7 @@ license: Apache-2.0
 tags: ["百度推广", "百度营销", "广告投放", "marketing", "sem", "oCPC", "数据报表"]
 metadata:
   category: productivity
-  updated: 2026-10-22
+  updated: "2026-10-22"
   actions: 73
   deprecated_actions: 7
   entrypoint: scripts/api.ts
@@ -20,7 +20,7 @@ metadata:
 
 # 百度推广助手
 
-版本：0.9.7
+版本：0.9.10
 
 本项目采用 **DTO 驱动 (Interface-Driven)** 的架构模式。所有可自动化功能均通过 `scripts/api.ts` 配合标准化 DTO Payload 进行调用。
 

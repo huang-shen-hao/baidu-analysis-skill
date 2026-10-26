@@ -952,6 +952,144 @@ function validateNegativeKeywordPacketDelete(payload) {
 
 /* ---- Danube Creative Group ---- */
 
+/* ---- 高级样式·创意组（官方节点 842 数据对象 / 847 新建创意组 / 843 常量接口运行时 config） ---- */
+
+// creativeComponents 允许的组件键（官方节点 842）
+const DANUBE_COMPONENT_KEYS = ['category', 'image', 'selectList', 'textList', 'plas', 'list'];
+
+// 官方节点 842：category（Category）与 list（ListType）的 content 是单个对象，其余组件的 content 是数组。
+const DANUBE_OBJECT_CONTENT = new Set(['category', 'list']);
+
+// 各样式「组件数量上下限」，取自 getDanubeConstants 返回的 config（2026-10-22 实测 3036/3148/3149/橱窗族）。
+// 官方 add 文档只说「组件填写要求不同」，不给具体数量 —— 这份表是运行时认到的真值。
+// 数组型组件（plas/selectList/image/textList）数的是 content 条数；对象型组件（category/list）数的是组件块个数。
+const DANUBE_COMPONENT_SPEC = {
+  3036: { plas: [4, 4], selectList: [4, 4] },        // 爆款单品橱窗 PC
+  3035: { plas: [3, 8], selectList: [2, 4] },        // 爆款单品橱窗 移动
+  3037: { plas: [3, 3] },                            // 全景橱窗 移动
+  3198: { plas: [3, 8] },                            // 热点橱窗 移动
+  3138: { plas: [3, 8] },                            // 商品橱窗 移动
+  9050: { plas: [4, 8] },                            // 官方枚举名「爆款单品橱窗（移动端）」，官方示例标题却是「图文（计算机）」
+  3120: { plas: [4, 4] },                            // 商品橱窗 PC
+  3124: { plas: [4, 4], category: [1, 1] },          // 热点橱窗 PC
+  3148: { selectList: [4, 4] },                      // 全息 PC
+  3149: { selectList: [2, 2], category: [1, 1] },    // 全息 移动
+  3003: { list: [1, 1] },                            // 商品列表 PC
+  3128: { list: [1, 1] },                            // 商品列表 移动
+};
+
+// 商品列表的商品行（ListType.rows）条数区间（运行时 config）
+const DANUBE_LIST_ROWS = { 3003: [1, 4], 3128: [1, 2] };
+
+// 橱窗（plas）各样式的必填字段（运行时 config）；官方 Plas 对象本身不标必填，未列出的样式只要求 image。
+// 3037 全景橱窗只要图片，官方示例也不带 url。
+const DANUBE_PLAS_REQUIRED = {
+  3036: ['url'], 3035: ['url'], 3037: [],
+  3198: ['name', 'url'], 9050: ['name', 'url'],
+  3138: ['name', 'desc', 'url'], 3120: ['name', 'desc', 'url'], 3124: ['name', 'desc', 'url'],
+};
+
+// 这些样式的 bindingLevel = PLAN：不能拿 [{"userId": ...}] 走账户层级绑定，
+// 否则字段校验能过、最后只会拿到 9011862000000「系统出错」。
+// 注意：官方示例里 3037/3198/9050 绑的是 userId，与实测不符，这里以实测为准。
+const DANUBE_PLAN_ONLY = new Set(Object.keys(DANUBE_COMPONENT_SPEC).map(Number));
+
+const PLAS_FIELD_NAMES = { url: '商品链接', name: '商品名称', desc: '商品描述' };
+
+function danubeError(at, message) {
+  throw usageError(`${at}: ${message}`);
+}
+
+function nonEmptyString(value) {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+/** 校验一个 creativeComponents 里的组件项（content 逐项 + 数量区间）。 */
+function validateDanubeComponent(key, list, at, mtIds) {
+  if (!Array.isArray(list) || list.length === 0) {
+    danubeError(at, `creativeComponents.${key} 必须是非空数组`);
+  }
+  list.forEach((block, i) => {
+    const where = `${at}.creativeComponents.${key}[${i}]`;
+    if (!block || typeof block !== 'object') danubeError(where, '必须是对象');
+    if (block.mtId === undefined) danubeError(where, 'mtId 必填');
+    const mtId = Number(block.mtId);
+    if (!mtIds.includes(mtId)) danubeError(where, `mtId=${block.mtId} 不在 materialTypes 里`);
+    const content = block.content;
+
+    if (DANUBE_OBJECT_CONTENT.has(key)) {
+      if (!content || typeof content !== 'object' || Array.isArray(content)) {
+        danubeError(where, `content 必须是对象（官方 ${key === 'category' ? 'Category' : 'ListType'}，不是数组）`);
+      }
+      const cell = `${where}.content`;
+      if (key === 'category') {
+        if (!Array.isArray(content.subLinks) || content.subLinks.length === 0) {
+          danubeError(cell, 'subLinks 必填（子链至少 1 个）');
+        }
+        content.subLinks.forEach((sub, k) => {
+          const at2 = `${cell}.subLinks[${k}]`;
+          if (!sub || !nonEmptyString(sub.label)) danubeError(at2, 'label 必填');
+          if (!Array.isArray(sub.textLink) || sub.textLink.length === 0) danubeError(at2, 'textLink 必填');
+          sub.textLink.forEach((tl, m) => {
+            const at3 = `${at2}.textLink[${m}]`;
+            if (!nonEmptyString(tl?.text)) danubeError(at3, 'text 必填');
+            if (!nonEmptyString(tl?.linkUrl)) danubeError(at3, 'linkUrl 必填');
+            if (mtId === 3149 && (Array.from(tl.text).length < 12 || Array.from(tl.text).length > 16)) {
+              danubeError(at3, '3149（全息移动）子链 text 需 12–16 个字符');
+            }
+          });
+        });
+      } else {
+        const rows = content.rows;
+        if (!Array.isArray(rows) || rows.length === 0) danubeError(cell, 'rows 必填（商品行至少 1 个）');
+        const range = DANUBE_LIST_ROWS[mtId];
+        if (range && (rows.length < range[0] || rows.length > range[1])) {
+          danubeError(cell, `样式 ${mtId} 的商品行 rows 需 ${range[0]}–${range[1]} 个，本次 ${rows.length} 个`);
+        }
+        const labelCount = Array.isArray(content.labels) ? content.labels.length : undefined;
+        rows.forEach((row, k) => {
+          const at2 = `${cell}.rows[${k}]`;
+          if (!row || typeof row !== 'object') danubeError(at2, '必须是对象');
+          // 官方：ListRowType.labels 长度要和 ListType.labels 保持一致
+          if (labelCount !== undefined && Array.isArray(row.labels) && row.labels.length !== labelCount) {
+            danubeError(at2, `labels 需 ${labelCount} 个（与 content.labels 长度一致），本次 ${row.labels.length} 个`);
+          }
+        });
+      }
+      return;
+    }
+
+    if (!Array.isArray(content) || content.length === 0) danubeError(where, 'content 必须是非空数组');
+
+    content.forEach((item, j) => {
+      const cell = `${where}.content[${j}]`;
+      if (key === 'image') {
+        const ids = (item && item.imageId !== undefined) ? [item] : (Array.isArray(item?.image) ? item.image : []);
+        if (!ids.length || ids.some((x) => x?.imageId === undefined)) {
+          danubeError(cell, 'imageId 必填（Image.url 是只读字段，不能代替 imageId）');
+        }
+      } else if (key === 'plas') {
+        if (!item || typeof item !== 'object') danubeError(cell, '必须是对象');
+        const imgs = Array.isArray(item.image) ? item.image : [];
+        if (!imgs.length || imgs.some((x) => x?.imageId === undefined)) {
+          danubeError(cell, 'image[].imageId 必填（Image.url 是只读字段）');
+        }
+        (DANUBE_PLAS_REQUIRED[mtId] || []).forEach((field) => {
+          if (!nonEmptyString(item[field])) {
+            danubeError(cell, `${field} 必填（${PLAS_FIELD_NAMES[field]}，样式 ${mtId} 要求）`);
+          }
+        });
+      } else if (key === 'selectList') {
+        if (!item || !nonEmptyString(item.key)) danubeError(cell, 'key 必填');
+        if (!nonEmptyString(item.value)) danubeError(cell, 'value 必填');
+        if (Array.from(item.value).length > 23) danubeError(cell, 'value 超过 23 个字符（官方 minLen1/maxLen23）');
+      } else if (key === 'textList') {
+        if (!nonEmptyString(item)) danubeError(cell, 'textList 每项必须是非空字符串');
+      }
+    });
+  });
+}
+
 function validateDanubeCreativeGroupAdd(payload) {
   const creativeGroupTypes = payload.body?.creativeGroupTypes;
   if (!Array.isArray(creativeGroupTypes) || creativeGroupTypes.length === 0) {
@@ -960,6 +1098,70 @@ function validateDanubeCreativeGroupAdd(payload) {
   if (creativeGroupTypes.length > 10) {
     throw usageError('danube-creative-group-add: creativeGroupTypes max 10 per request');
   }
+  creativeGroupTypes.forEach((group, index) => {
+    const at = `danube-creative-group-add: creativeGroupTypes[${index}]`;
+    if (!group || typeof group !== 'object') danubeError(at, '必须是对象');
+    if (typeof group.creativeGroupName !== 'string' || !group.creativeGroupName.trim()) {
+      danubeError(at, 'creativeGroupName 必填');
+    }
+    if (baiduByteLength(group.creativeGroupName) < 1 || baiduByteLength(group.creativeGroupName) > 20) {
+      danubeError(at, 'creativeGroupName 长度需 1–20 字节（中文 2 字节）');
+    }
+
+    const materialTypes = Array.isArray(group.materialTypes) ? group.materialTypes.map(Number) : [];
+    if (!materialTypes.length) danubeError(at, 'materialTypes 必填');
+
+    const range = group.bindingRange;
+    if (!Array.isArray(range) || range.length === 0) danubeError(at, 'bindingRange 必填');
+    range.forEach((item, i) => {
+      const at2 = `${at}.bindingRange[${i}]`;
+      // 官方：绑账户只给 userId；绑计划只给 campaignId；绑单元给 adgroupId + 所属 campaignId。
+      if (!item || typeof item !== 'object') danubeError(at2, '必须是对象');
+      const has = (k) => item[k] !== undefined;
+      let kind;
+      if (has('adgroupId')) {
+        if (!has('campaignId')) danubeError(at2, '绑单元时必须同时给所属 campaignId');
+        if (has('userId')) danubeError(at2, '绑单元时不能同时给 userId');
+        kind = 'adgroupId';
+      } else {
+        const kinds = ['userId', 'campaignId'].filter(has);
+        if (kinds.length !== 1) danubeError(at2, '必须给 userId（账户）/ campaignId（计划）/ adgroupId + campaignId（单元）之一');
+        kind = kinds[0];
+      }
+      const planOnly = materialTypes.filter((m) => DANUBE_PLAN_ONLY.has(m));
+      if (kind === 'userId' && planOnly.length) {
+        danubeError(at2, `样式 ${planOnly.join('/')} 的 bindingLevel 是 PLAN，不能绑账户（请用 campaignId/adgroupId）`);
+      }
+    });
+
+    const comps = group.creativeComponents;
+    if (!comps || typeof comps !== 'object' || Array.isArray(comps)) {
+      danubeError(at, 'creativeComponents 必填');
+    }
+    const unknown = Object.keys(comps).filter((k) => !DANUBE_COMPONENT_KEYS.includes(k));
+    if (unknown.length) {
+      danubeError(at, `creativeComponents 不支持的组件 ${unknown.join('/')}；只支持 ${DANUBE_COMPONENT_KEYS.join('/')}`);
+    }
+    Object.keys(comps).forEach((key) => validateDanubeComponent(key, comps[key], at, materialTypes));
+
+    // 样式 → 组件数量区间（运行时 config 核实）
+    materialTypes.forEach((mtId) => {
+      const spec = DANUBE_COMPONENT_SPEC[mtId];
+      if (!spec) return;
+      Object.entries(spec).forEach(([key, [min, max]]) => {
+        const list = comps[key];
+        if (!Array.isArray(list) || list.length === 0) {
+          danubeError(at, `样式 ${mtId} 需要组件 ${key}`);
+        }
+        const n = DANUBE_OBJECT_CONTENT.has(key)
+          ? list.length
+          : list.flatMap((b) => (Array.isArray(b?.content) ? b.content : [])).length;
+        if (n < min || n > max) {
+          danubeError(at, `样式 ${mtId} 的 ${key} 需 ${min === max ? min + ' 个' : `${min}–${max} 个`}，本次 ${n} 个`);
+        }
+      });
+    });
+  });
 }
 
 function validateDanubeCreativeGroupUpdate(payload) {
@@ -1336,7 +1538,7 @@ function validateImageUpload(payload) {
     throw usageError('image-upload: items max 20 per request');
   }
   // 官方节点 522：单张不限，但**整包请求体 ≤ 10M**（content 为纯 base64，不带 data: 前缀）。
-  let totalBytes = 0;
+  // 限的是请求体本身，即 base64 字符串的长度，不是解码后的图片字节（base64 比原图大约 1/3）。
   items.forEach((item, index) => {
     const at = `image-upload: items[${index}]`;
     if (!item || typeof item.content !== 'string' || item.content.trim() === '') {
@@ -1345,13 +1547,12 @@ function validateImageUpload(payload) {
     if (/^data:image\//i.test(item.content.trim())) {
       throw usageError(`${at}.content must not include the "data:image/...;base64," prefix`);
     }
-    totalBytes += base64Bytes(item.content);
     if (item.imageName !== undefined && baiduByteLength(item.imageName) > 200) {
       throw usageError(`${at}.imageName max 200 characters (中文按 2 字符)`);
     }
   });
-  if (totalBytes > 10 * 1024 * 1024) {
-    throw usageError('image-upload: request body exceeds 10M（官方限制整包 ≤ 10M，请分批）');
+  if (Buffer.byteLength(JSON.stringify(body), 'utf8') > 10 * 1024 * 1024) {
+    throw usageError('image-upload: request body exceeds 10M（官方限制整包请求体 ≤ 10M，按 base64 长度算，请分批）');
   }
   if (body.addImage !== undefined && typeof body.addImage !== 'boolean') {
     throw usageError('image-upload: addImage must be a boolean');
@@ -1423,7 +1624,7 @@ function validateImageDelete(payload) {
 /*  契约来源：dev2「工具 / 搜索推广工具 / 关键词规划师」                 */
 /* ------------------------------------------------------------------ */
 
-const KR_DEVICES = [0, 1, 2];                       // 0 全部 / 1 计算机 / 2 移动
+const KR_DEVICES = [0, 1, 2];                       // 拓词：0 全部 / 1 计算机 / 2 移动；流量预估：0 全部 / 1 仅移动 / 2 仅计算机
 const KR_ORDER_BY = ['price', 'matchType', 'averageMonthPv', 'averageMonthPvMobile',
   'averageMonthPvPc', 'show', 'click', 'pcPrice', 'mobilePrice'];
 
@@ -1505,8 +1706,9 @@ function validateKeywordPlannerPvGet(payload) {
     if (!item || typeof item.keywordName !== 'string' || item.keywordName.trim() === '') {
       throw usageError(`${at}.keywordName is required`);
     }
-    if (bytesOf(item.keywordName) > 40) {
-      throw usageError(`${at}.keywordName exceeds 40 bytes`);
+    // 官方：最大 40 字节，1 个中文按 2 字节、英文数字按 1 字节（不是 UTF-8 字节数）
+    if (baiduByteLength(item.keywordName) > 40) {
+      throw usageError(`${at}.keywordName exceeds 40 bytes（中文按 2 字节）`);
     }
     if (item.matchType !== undefined && ![1, 2].includes(item.matchType)) {
       throw usageError(`${at}.matchType must be 1（精确）or 2（短语/智能，配 phraseType）`);
@@ -1547,7 +1749,11 @@ function validateImageSegmentAdd(payload) {
     if (![100, 101].includes(item.segmentType)) {
       throw usageError(`${at}.segmentType must be 100 (计算机) or 101 (移动)`);
     }
-    if (item.desc !== undefined) {
+    // 官方：一个素材至少一个主题，所以 desc 必填
+    if (item.desc === undefined) {
+      throw usageError(`${at}.desc is required（至少 1 个图片主题）`);
+    }
+    {
       if (!Array.isArray(item.desc)) {
         throw usageError(`${at}.desc must be an array of 图片主题`);
       }

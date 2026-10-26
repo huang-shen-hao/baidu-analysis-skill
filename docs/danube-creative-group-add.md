@@ -23,17 +23,30 @@
   "body": {
     "creativeGroupTypes": [
       {
-        "creativeGroupName": "测试创意组",
-        "bindingRange": [{ "userId": 123456 }],
-        "materialTypes": [3037],
-        "category": [2880, 2881],
+        "creativeGroupName": "爆款橱窗-测试",
+        "bindingRange": [{ "campaignId": 2249234135 }],
+        "materialTypes": [3036],
+        "category": [4165, 4171],
         "creativeComponents": {
           "plas": [
             {
-              "mtId": 3037,
+              "mtId": 3036,
               "content": [
-                { "image": [{ "imageId": 1509701499 }] },
-                { "image": [{ "imageId": 1508578678 }] }
+                { "image": [{ "imageId": 5735268338 }], "url": "https://www.esign.cn/", "name": "电子签章", "desc": "合规有效" },
+                { "image": [{ "imageId": 5735269236 }], "url": "https://www.esign.cn/", "name": "电子合同", "desc": "在线签署" },
+                { "image": [{ "imageId": 5735269560 }], "url": "https://www.esign.cn/", "name": "合同管理", "desc": "全流程" },
+                { "image": [{ "imageId": 5735269910 }], "url": "https://www.esign.cn/", "name": "电子公章", "desc": "用印管控" }
+              ]
+            }
+          ],
+          "selectList": [
+            {
+              "mtId": 3036,
+              "content": [
+                { "key": "合规", "value": "符合电子签名法" },
+                { "key": "效率", "value": "分钟级完成签署" },
+                { "key": "安全", "value": "全链路存证" },
+                { "key": "适用", "value": "人力采购销售合同" }
               ]
             }
           ]
@@ -43,6 +56,9 @@
   }
 }
 ```
+
+> 三个最容易踩的点：① `bindingRange` 用 `campaignId`（3036/3148/3149 都是 PLAN 级，绑 `userId` 会一路过校验、最后只报 9011862000000）；
+> ② `image` 里传 **`imageId`**（`url` 是只读返回字段，传 url 等于没传图）；③ `content` 条数必须落在样式的 min–max 区间（3036 恰好 4 / 4）。
 
 ## 安全要求
 
@@ -74,7 +90,7 @@
 
 - 绑定账户：`[{"userId": 5962578}]`
 - 绑定计划：`[{"campaignId": 91100082}]`
-- 绑定单元：`[{"adgroupId": 4502837792}]`
+- 绑定单元：`[{"adgroupId": 4502837792, "campaignId": 91100082}]`（官方要求同时填所属计划 ID，官方示例漏写了）
 - 绑定账户时不能同时绑定计划和单元；绑定计划时不能同时绑定该计划下的单元。
 
 ### materialTypes 可选枚举
@@ -124,6 +140,42 @@
 | `plas` | 橱窗组件 |
 | `list` | 列表组件 |
 
+### 组件对象（官方节点 842「高级样式数据对象」）
+
+每个组件块是 `{ "mtId": <样式ID>, "content": ... }`，`mtId` 必须属于本组的 `materialTypes`。
+`plas` / `image` / `selectList` / `textList` 的 `content` 是**数组**；`category`（`Category`）和 `list`（`ListType`）的 `content` 是**单个对象**（官方节点 842），写成数组会被本地校验拦下。
+
+| 组件键 | content 元素 | 字段（必填加粗） |
+|---|---|---|
+| `plas` | `Plas` | **`image`**（`Image[]` 且每项 **`imageId`** 必填）；`url`、`name`、`desc` 是否必填看样式（见下表），`swanUrl`、`deepLink`、`ulink` 选填 |
+| `image` | `Image` | **`imageId`**；`url`、`cutTop/cutLeft/cutWidth/cutHeight`、`viewWidth/viewHeight`、`originWidth/originHeight` 全部**只读**（查询时返回，提交不要传） |
+| `selectList` | `SelectList` | **`key`**、**`value`**（`value` 1–23 字符，`key`/`value` 组内不可重复） |
+| `category` | `Category`（对象）→ `subLinks[]` → `textLink[]` | `industry`；`subLinks[].label`、`subLinks[].textLink[]`；`textLink[].text`、`textLink[].linkUrl`、`swanUrl`、`moreLink` |
+| `textList` | String | 每项非空字符串 |
+| `list` | `ListType`（对象） | `industry`、`labels[]`、`slogan`、**`rows[]`**（商品行：`productName`、`productUrl`、`targetUrl`、`labels[]` 等）；每行 `labels` 长度须与外层 `labels` 一致 |
+
+### 各样式组件要求（运行时核实 2026-10-22）
+
+官方 add 页只写「各样式对组件的填写要求不同」，具体数量只能从 `danube-constants-get` 返回的 `config` 里拿。下表是实测值（`minSize–maxSize`，等值即"必须正好这么多个"）。数组型组件数的是 `content` 条数，`category` / `list` 数的是组件块个数：
+
+| 样式 | 设备 | 组件与数量 | 必填字段 | bindingLevel |
+|---|---|---|---|---|
+| 3036 爆款单品橱窗 | PC | `plas` 4、`selectList` 4 | plas: `image.url`、`url`；selectList: `key`、`value` | PLAN |
+| 3035 爆款单品橱窗 | 移动 | `plas` 3–8、`selectList` 2–4 | 同上 | PLAN |
+| 3037 全景橱窗 | 移动 | `plas` 3 | `image.url` | PLAN |
+| 3198 热点橱窗 | 移动 | `plas` 3–8 | `image.url`、`name`、`url` | PLAN |
+| 3138 商品橱窗 | 移动 | `plas` 3–8 | `image.url`、`name`、`desc`、`url` | PLAN |
+| 9050 爆款单品橱窗（官方枚举名；官方示例标题写「图文（计算机）」） | 移动 | `plas` 4–8 | `image.url`、`name`、`url` | PLAN |
+| 3120 商品橱窗 | PC | `plas` 4 | `image.url`、`name`、`desc`、`url` | PLAN |
+| 3124 热点橱窗 | PC | `plas` 4、`category` 1（子链 3–15） | plas: 四项全填；category: `industry`/`label`/`text`/`linkUrl` | PLAN |
+| 3148 全息 | PC | `image` + `selectList` 4 | selectList: `key`、`value` | PLAN |
+| 3149 全息 | 移动 | `image` + `selectList` 2 + `category` 1（子链 2–4） | category: `text`（**12–16 字**）、`linkUrl` | PLAN |
+| 3003 商品列表 | PC | `list` 1 块，`rows` 1–4 行 | `industry`、`label`、`text`、`linkUrl` | PLAN |
+| 3128 商品列表 | 移动 | `list` 1 块，`rows` 1–2 行 | 同上 | PLAN |
+
+> 表里的样式 `bindingLevel` 全是 **PLAN**：`bindingRange` 只能给 `campaignId` / `adgroupId`，给 `userId`（账户层级）会通过字段校验、最后以 9011862000000 收场。
+> 官方 add 页的 3037 / 3198 / 9050 示例绑的是 `userId`，与实测不符，本 skill 以实测为准。
+
 ## 返回字段
 
 | 字段 | 类型 | 说明 |
@@ -144,6 +196,16 @@
 |------|------|------|
 | `danube-creative-group-add requires body.creativeGroupTypes` | 漏传必填字段 creativeGroupTypes | 按本文「输入字段」补齐 body.creativeGroupTypes |
 | `danube-creative-group-add: creativeGroupTypes max 10 per request` | 单次提交数量超过上限 10 | 分批提交，每批 ≤ 10 |
+| `样式 3036 的 bindingLevel 是 PLAN，不能绑账户` | `bindingRange` 传了 `userId` | 改传 `campaignId`（或 `adgroupId` + 所属 `campaignId`） |
+| `image[].imageId 必填（Image.url 是只读字段）` | `image` 里传了 url、没传 imageId | 先 `image-get`/`image-upload` 拿 `imageId` |
+| `样式 3036 的 selectList 需 4 个，本次 3 个` | content 条数不在该样式的 min–max | 按「各样式组件要求」表补齐/裁剪 |
+| `绑单元时必须同时给所属 campaignId` | 只给了 `adgroupId` | 补上该单元所属的 `campaignId` |
+| `content 必须是对象（官方 Category，不是数组）` | `category` / `list` 的 content 写成了数组 | 改成单个对象 |
+| `url 必填（商品链接，样式 3036 要求）` | 该样式的橱窗商品缺必填字段 | 按「各样式组件要求」表补齐 |
+| `样式 3149 需要组件 category` | 全息移动缺子链组件 | 补 `category`：1 个主 + 2–4 个子链 |
+| `3149（全息移动）子链 text 需 12–16 个字符` | 子链文案长度不合规 | 调整到 12–16 字 |
+| `creativeComponents 不支持的组件 xxx` | 组件键写错（如 `select_list`、`plAS`） | 只允许 `category/image/selectList/textList/plas/list` |
+| 远端 `9011862000000 系统出错` | 字段都过了但服务端内部校验失败：绑定层级不符（PLAN 样式绑账户）、`image` 只有 url 没有 imageId、content 条数不在区间、`mtId` 与 `materialTypes` 不一致、3149 子链缺字段 | 按上面四类逐条自查；本地校验器已覆盖这四类，能过本地再发就不会再撞这个错 |
 | `status=2 code=81020` | 用户名不正确：常见于误用 MCC/账户管家主账号调业务接口 | 改用具体推广子账号的 username |
 
 > **来源**：校验器条目逐字取自 `scripts/api.ts`（与本 skill 实际输出一致，可复现）；
@@ -152,5 +214,5 @@
 ## 调用示例
 
 ```bash
-node scripts/api.ts --payload='{"action":"danube-creative-group-add","confirmWrite":true,"userName":"子账号用户名","body":{"creativeGroupTypes":[{"creativeGroupName":"测试创意组","bindingRange":[{"userId":123456}],"materialTypes":[3037],"category":[2880,2881],"creativeComponents":{"plas":[{"mtId":3037,"content":[{"image":[{"imageId":1509701499}]},{"image":[{"imageId":1508578678}]}]}]}}]}}'
+node scripts/api.ts --payload='{"action":"danube-creative-group-add","confirmWrite":true,"userName":"子账号用户名","body":{"creativeGroupTypes":[{"creativeGroupName":"测试创意组","bindingRange":[{"campaignId":91100082}],"materialTypes":[3037],"category":[2880,2881],"creativeComponents":{"plas":[{"mtId":3037,"content":[{"image":[{"imageId":1509701499}]},{"image":[{"imageId":1508578678}]},{"image":[{"imageId":1508576529}]}]}]}}]}}'
 ```

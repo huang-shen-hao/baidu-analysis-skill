@@ -69,7 +69,7 @@
 | `BAIDU_USAGE_ERR: items max 20 per request` | 一次传超过 20 张图片 | 分批上传，每批 ≤ 20 张 |
 | `content must not include the "data:image/..." prefix` | base64 带了 `data:image/jpg;base64,` 前缀 | 只传纯 base64 字符串 |
 | 返回结果里没有 `imageId` | `addImage` 默认 `false`（仅上传不保存） | 需要入库并返回 `imageId` 时显式传 `addImage: true` |
-| `image-upload: request body exceeds 10M（官方限制整包 ≤ 10M，请分批）` | 整包 base64 超过 10M（官方：单张不限、整包 ≤ 10M） | 压缩图片或分批上传 |
+| `image-upload: request body exceeds 10M（官方限制整包请求体 ≤ 10M，按 base64 长度算，请分批）` | 整包请求体超过 10M。按 base64 字符串长度算，base64 比原图大约 1/3，所以原图合计约 7.5M 就会触顶 | 压缩图片或分批上传 |
 
 > **来源**：校验器条目逐字取自 `scripts/api.ts`（与本 skill 实际输出一致，可复现）；
 > 权限类错误码取自百度官方错误码表（dev2.baidu.com 节点 166），已按**动作**精确映射，但**未经逐条实测**。
