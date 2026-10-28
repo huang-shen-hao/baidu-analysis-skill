@@ -110,6 +110,11 @@
 | 0 | 短语匹配 |
 | 63 | 精确匹配 |
 
+### 本接口拿不到的信息
+
+- **否词包内的词**：`level=33` 只是「计划-否词包绑定」行，`negativeKeyword` 是包名。展开包内明细用 `negative-keyword-packet-get`，在 `negativeKeywordPacketTypeFields` 里加 `negativeKeywords`。
+- **启停状态 / 生效时间**：官方请求字段只有上面 11 个，没有 status、pause 之类的字段，加了也不会返回；只有 `addTime`（添加时间）和 `modTime`（修改时间）可用。
+
 ## 常见错误
 
 | 现象 | 原因 | 处理 |

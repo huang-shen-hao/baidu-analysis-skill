@@ -6,7 +6,7 @@
 
 ## Action
 
-`NegativeKeywordPacket-get`
+`negative-keyword-packet-get`
 
 ## 接口
 
@@ -17,7 +17,7 @@
 
 ```json
 {
-  "action": "NegativeKeywordPacket-get",
+  "action": "negative-keyword-packet-get",
   "userName": "子账号用户名",
   "body": {
     "negativeKeywordPacketTypeFields": [
@@ -34,6 +34,31 @@
   }
 }
 ```
+
+## 展开否词包内的否词明细
+
+`negative-keyword-get` 只返回 `level=33` 的「计划-否词包绑定」行（`negativeKeyword` 是包名），**不展开包里的词**。
+要看包里具体有哪些否词，用本接口在 `negativeKeywordPacketTypeFields` 里加上 **`negativeKeywords`**，按包 ID 查：
+
+```json
+{
+  "action": "negative-keyword-packet-get",
+  "userName": "子账号用户名",
+  "body": {
+    "negativeKeywordPacketIds": [123456],
+    "negativeKeywordPacketTypeFields": [
+      "negativeKeywordPacketId",
+      "negativeKeywordPacketName",
+      "totalNegativeKeywordCount",
+      "negativeKeywords"
+    ]
+  }
+}
+```
+
+- 包 ID 来自 `negative-keyword-get` 返回的 `level=33` 行里的 `negativeKeywordPacketId`。
+- 每个包的 `negativeKeywords[]` 最多返回 5000 个词，每项含 `negativeKeyword`（字面）和 `negativeMatchType`（0 短语 / 63 精确）。
+- 包多、词多时先不带 `negativeKeywords` 拉一次列表看 `totalNegativeKeywordCount`，再按 ID 分批展开，避免一次返回过大。
 
 ## 行为说明
 
@@ -131,5 +156,5 @@
 ## 调用示例
 
 ```bash
-node scripts/api.ts --payload='{"action":"NegativeKeywordPacket-get","userName":"子账号用户名","body":{"negativeKeywordPacketTypeFields":["negativeKeywordPacketId","negativeKeywordPacketName","totalNegativeKeywordCount","bindCampaignNames","bindCampaignIds","bindCampaignCount"],"orderBy":"bindCampaignCount","desc":true,"limit":[0,10]}}'
+node scripts/api.ts --payload='{"action":"negative-keyword-packet-get","userName":"子账号用户名","body":{"negativeKeywordPacketTypeFields":["negativeKeywordPacketId","negativeKeywordPacketName","totalNegativeKeywordCount","bindCampaignNames","bindCampaignIds","bindCampaignCount"],"orderBy":"bindCampaignCount","desc":true,"limit":[0,10]}}'
 ```
