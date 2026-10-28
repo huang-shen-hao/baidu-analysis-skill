@@ -1,0 +1,21 @@
+docs/negative-keyword-get.md
+  s_90fa6dab0b48d2::t_e7d79fc960c55b 113-117
+docs/negative-keyword-packet-get.md
+  s_90fa6dab0b48d2::t_e7d79fc960c55b 9,20,38-62,159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "966276e9252d7b3c00254be63f20a578b338d504",
+  "prompts": {},
+  "sessions": {
+    "s_90fa6dab0b48d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d3d22047-ca93-4e90-bda0-dd141835215a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "huang-shen-hao <huang-shen-hao@users.noreply.github.com>"
+    }
+  }
+}
